@@ -1,0 +1,40 @@
+{{ template "base" . }}
+
+{{ define "style"}}
+
+{{ end}}
+
+{{ define "title" }}
+    Resize
+{{ end }}
+
+{{ define "content" }}
+    <h2 class="mt-3 text-center">Perform Resize Image</h2>
+    <hr/>
+    <div class="alert alert-danger text-center d-none" id="card-messages"></div>
+    <form action="{{.API}}/api/resize" method="post"
+          name="resize_form" id="resize_form"
+          class="d-block needs-validation resize-form"
+          autocomplete="off" novalidate="">
+
+        <div class="mb-2">
+            <label for="image-path" class="form-label">Path to Image</label>
+            <input type="text" class="form-control" id="image-path" name="image-path"
+                   required="" autocomplete="image-path-new"/>
+
+            <label for="size" class="form-label">Size</label>
+            <input type="number" class="form-control" id="size" name="size"
+                   required="" autocomplete="size-new" style="text-align: right;" value="1024"/>
+
+        </div>
+
+        <div class="text-end">
+            <input type="submit" value="Do-Resize" class="btn btn-primary"/>
+        </div>
+
+    </form>
+{{ end }}
+
+{{ define "js" }}
+
+{{ end }}

@@ -1,0 +1,200 @@
+{{ template "base" . }}
+
+{{ define "title"}}
+    Browse Photos
+{{ end }}
+
+{{ define "content" }}
+    <h2 class="mt-5">Browse Photos</h2>
+    <hr/>
+
+    <div class="alert alert-danger text-center d-none" id="messages"></div>
+
+    <form action="" method="post"
+          name="browse_form" id="browse_form"
+          class="d-block needs-validation occasion-form"
+          autocomplete="off" novalidate="">
+
+        <div class="mb-2">
+            <label for="directory" class="form-label">Directory</label>
+            <input type="text" class="form-control" id="directory" name="directory"
+                   required="required" autocomplete="name-new" value="/Volumes/LaCie/test-copy"/>
+        </div>
+        <div class="text-end">
+            <a href="javascript:void(0)" class="btn btn-primary text-end" onclick="listDir()">Scan dir</a>
+        </div>
+    </form>
+    <hr/>
+
+    <div class="row">
+        <div class="col-3">
+            <ul class="list-group" name="directory-list" id="directory-list"></ul>
+        </div>
+        <div class="col-9">
+            <ul class="list-group" name="file-list" id="file-list"></ul>
+            <table id="image-table" class="table table-striped">
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{{ end }}
+
+{{ define "js" }}
+    <script>
+        let columns = 5
+        let table = document.getElementById("image-table")
+
+        let messages = document.getElementById("messages")
+        let dirList = document.getElementById("directory-list")
+        let fileList = document.getElementById("file-list")
+
+        function showError(msg) {
+            messages.classList.add("alert-danger")
+            messages.classList.remove("alert-success")
+            messages.classList.remove("d-none")
+            messages.innerText = msg
+        }
+
+        function showSuccess(msg) {
+            messages.classList.remove("alert-danger")
+            messages.classList.add("alert-success")
+            messages.classList.add("d-none")
+            messages.innerText = "Success"
+        }
+
+        function listDir() {
+            console.log("clicked api is {{ .API }}")
+            dirList.innerHTML = ""
+
+            let form = document.getElementById("browse_form")
+            if (form.checkValidity() == false) {
+                this.event.preventDefault()
+                this.event.stopPropagation()
+                form.classList.add("was-validated")
+                return
+            }
+
+            console.log("valid form ")
+
+            let payload = {
+                directory: document.getElementById("directory").value,
+            }
+
+            console.log(JSON.stringify(payload))
+
+            const requestOptions = {
+                method: "post",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            }
+            fetch("{{.API}}/api/browse-photos", requestOptions)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error === false) {
+                        showSuccess()
+                        listDirs(data.data)
+                        listFiles(data.data.files)
+                    } else {
+                        showError(data.message)
+                    }
+                })
+                .catch(error => {
+                    console.error('There was an error!', error);
+                    showError("Could not send to {{.API}}/api/browse-photos")
+                })
+        }
+
+        function listDirs(data) {
+            dirList.innerHTML = ""
+
+            let li = document.createElement("li");
+            li.className = "list-group-item"
+            let aref = document.createElement("a")
+            aref.setAttribute("class", "list-group-item-action")
+            aref.setAttribute("href", "#!")
+            aref.setAttribute("onclick", "goToDir(\"" + "..UP.." + "\")")
+            aref.appendChild(document.createTextNode("..UP.."))
+            li.appendChild(aref);
+            dirList.appendChild(li);
+
+            if (data.dirs === null) {
+                return
+            }
+
+            for (let i = 0; i < data.dirs.length; i++) {
+                let li = document.createElement("li");
+                li.className = "list-group-item"
+                let aref = document.createElement("a")
+                aref.setAttribute("class", "list-group-item-action")
+                aref.setAttribute("href", "#!")
+                aref.setAttribute("onclick", "goToDir(\"" + data.dirs[i] + "\")")
+                aref.appendChild(document.createTextNode(data.dirs[i]))
+                li.appendChild(aref);
+                dirList.appendChild(li);
+            }
+        }
+
+        function listFiles(files) {
+            let oldTbody = table.getElementsByTagName("tbody")[0]
+            let tbody = document.createElement('tbody');
+            table.replaceChild(tbody, oldTbody)
+
+            if (files === null) {
+                return
+            }
+            let currentDirectory = document.getElementById("directory").value
+
+            if (files) {
+                let newRow = tbody.insertRow()
+                files.forEach(function (imageFile, index) {
+                    newCell = newRow.insertCell()
+                    newCell.innerHTML = `<a href="{{.API}}/api/image?path=${currentDirectory}/${imageFile}" target="_blank"> <div class="card">
+  <img src="{{.API}}/api/image?path=${currentDirectory}/${imageFile}&scale=250" class="card-img-top" alt="...">
+  <div class="card-body">
+    <p class="card-text">${imageFile}</p>
+  </div>
+</div></a>`
+                    if ((index + 1) % columns === 0) {
+                        newRow = tbody.insertRow()
+                    }
+                })
+
+                if (columns > files.length) {
+                    for (i = 0; i <= columns - files.length; i++) {
+                        newCell = newRow.insertCell()
+                        console.log("fille")
+                        newCell.innerHTML = `<div class="card">
+  <div class="card-body">
+    <p class="card-text">EMPTY</p>
+  </div>
+</div>`
+                    }
+                }
+            }
+
+        }
+
+        function goToDir(dir) {
+            let currentDirectory = document.getElementById("directory").value
+            if (dir === "..UP..") {
+                document.getElementById("directory").value = RemoveLastDirectoryPartOf(currentDirectory)
+            } else {
+                document.getElementById("directory").value = currentDirectory + "/" + dir
+            }
+
+            listDir()
+        }
+
+        function RemoveLastDirectoryPartOf(the_url) {
+            var the_arr = the_url.split('/');
+            the_arr.pop();
+            return (the_arr.join('/'));
+        }
+    </script>
+{{ end }}

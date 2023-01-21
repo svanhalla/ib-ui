@@ -1,0 +1,55 @@
+{{ template "base" . }}
+
+
+{{ define "title" }}
+    List Occasion
+{{ end }}
+
+
+{{ define "content" }}
+    {{ $occasions := index .Data "occasions" }}
+
+    <div>
+        <h2>List Occasions</h2>
+        <hr/>
+        <table class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Root</th>
+                <th></th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {{ range $i,$v := $occasions  }}
+                <tr key="{{ $i }}">
+                    <td>
+                        <a href="/occasions/{{$i}}">
+                            {{$v.Name }}
+                        </a>
+                    </td>
+                    <td>{{$v.Description}}</td>
+                    <td>{{$v.Root }}</td>
+                    <td>
+                        <button type="button" class="btn btn-secondary" onclick="#!">GEN</button>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-secondary" onclick="editOccasion({{ $i }})">Edit</button>
+                    </td>
+                </tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+{{ end }}
+
+
+{{ define "js" }}
+    <script>
+        function editOccasion(id) {
+            window.location.href = "occasions/" + id
+        }
+    </script>
+{{ end }}
