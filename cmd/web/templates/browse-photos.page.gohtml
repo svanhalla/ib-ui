@@ -18,7 +18,7 @@
         <div class="mb-2">
             <label for="directory" class="form-label">Directory</label>
             <input type="text" class="form-control" id="directory" name="directory"
-                   required="required" autocomplete="name-new" value="/Volumes/LaCie/test-copy"/>
+                   required="required" autocomplete="name-new" value="/Volumes/ssd/moa-rasmus/0-cover/scaled/"/>
         </div>
         <div class="text-end">
             <a href="javascript:void(0)" class="btn btn-primary text-end" onclick="listDir()">Scan dir</a>
@@ -149,13 +149,21 @@
                 return
             }
             let currentDirectory = document.getElementById("directory").value
+            let api = {{.API}}
 
             if (files) {
                 let newRow = tbody.insertRow()
+                console.log("api is this : {{.API}}")
+                console.log("api")
+                console.log(api)
+                // console.log("image-file")
+                // console.log(imageFile)
+                // console.log("index")
+                // console.log(index)
                 files.forEach(function (imageFile, index) {
                     newCell = newRow.insertCell()
-                    newCell.innerHTML = `<a href="{{.API}}/api/image?path=${currentDirectory}/${imageFile}" target="_blank"> <div class="card">
-  <img src="{{.API}}/api/image?path=${currentDirectory}/${imageFile}&scale=250" class="card-img-top" alt="...">
+                    newCell.innerHTML = `<a href="${api}/api/image?path=${currentDirectory}/${imageFile}" target="_blank"> <div class="card">
+  <img src="${api}/api/image?path=${currentDirectory}/${imageFile}&scale=250" class="card-img-top" alt="...">
   <div class="card-body">
     <p class="card-text">${imageFile}</p>
   </div>
@@ -168,7 +176,7 @@
                 if (columns > files.length) {
                     for (i = 0; i <= columns - files.length; i++) {
                         newCell = newRow.insertCell()
-                        console.log("fille")
+                        console.log("empty")
                         newCell.innerHTML = `<div class="card">
   <div class="card-body">
     <p class="card-text">EMPTY</p>

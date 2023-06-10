@@ -1,8 +1,13 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"path"
+
+	"github.com/svanhalla/ib-ui/internal/models"
 
 	"github.com/svanhalla/ib-ui/internal/picture"
 	"github.com/urfave/cli/v2"
@@ -91,9 +96,9 @@ func CreateApp() cli.App {
 				},
 			},
 			{
-				Name:  "generate-occasion",
-				Usage: "generates a occasion page from images in a directory",
-				// Action: GenerateOccasion,
+				Name:   "generate-occasion",
+				Usage:  "generates a occasion page from images in a directory",
+				Action: GenerateOccasion,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "config",
@@ -119,9 +124,9 @@ func CreateApp() cli.App {
 				},
 			},
 			{
-				Name:  "generate-example",
-				Usage: "generate example json",
-				// Action: ExampleJSON,
+				Name:   "generate-example",
+				Usage:  "generate example json",
+				Action: ExampleJSON,
 			},
 		},
 	}
@@ -144,5 +149,99 @@ func ResizeImage(cliCtx *cli.Context) error {
 			return fmt.Errorf("failed to resize picture: %w", err)
 		}
 	}
+	return nil
+}
+
+func ExampleJSON(_ *cli.Context) error {
+	var Definition = models.OccasionDefinition{
+		Name:            "generated example",
+		Description:     "generated example",
+		Root:            "/tmp/images/",
+		NumberOfColumns: 4,
+		Title:           "the title",
+		Size:            256,
+		Date:            "the date",
+		Location:        "the location ",
+		Cover: models.Part{
+			Dir:  "0-cover",
+			Size: 1024,
+		},
+		Parts: []models.Part{
+			{
+				Dir:  "1-preparations",
+				Name: "Förberedelse",
+			},
+			{
+				Dir:  "2-cermony",
+				Name: "Cermoni",
+			},
+			{
+				Dir:  "3-mingle",
+				Name: "Mingel",
+			},
+			{
+				Dir:  "4-dinner",
+				Name: "Middag",
+			},
+			{
+				Dir:  "5-party",
+				Name: "Fest",
+			},
+			{
+				Dir:  "6-portrait",
+				Name: "Porträtt",
+			},
+		},
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user home dir: %w", err)
+	}
+
+	ibDir := path.Join(homeDir, ".ib")
+	if _, err := os.Stat(ibDir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(ibDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("failed to crete dir %s:%w", ibDir, err)
+		}
+	}
+
+	marshalIndent, err := json.MarshalIndent(Definition, "", " ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal to json:%w", err)
+	}
+
+	fileToWrite := path.Join(ibDir, "example.json")
+	err = os.WriteFile(fileToWrite, marshalIndent, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write file %s:%w", fileToWrite, err)
+	}
+
+	fmt.Printf("created file '%s'\n", fileToWrite)
+	return nil
+}
+
+func GenerateOccasion(cliCtx *cli.Context) error {
+	config := cliCtx.String("config")
+
+	jsonFile, err := os.Open(config)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s:%w", config, err)
+	}
+
+	// get the definition from file
+	definition := models.OccasionDefinition{}
+
+	err = json.NewDecoder(jsonFile).Decode(&definition)
+	if err != nil {
+		return fmt.Errorf("failed to decode json file %s: %w", config, err)
+	}
+
+	err = definition.GenerateOccasion()
+	if err != nil {
+		return fmt.Errorf("failed to generate occasion: %w", err)
+	}
+
 	return nil
 }

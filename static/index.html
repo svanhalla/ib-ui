@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <script type="text/javascript" src="/json/json-viewer.js"></script>
+    <link rel="stylesheet" type="text/css" href="/json/json-viewer.css">
+
+    <script>
+        let jsonList = [
+            {
+                "json": "{{ .JSON }}",
+                "version": "{{ .ID }}",
+            },
+        ]
+
+        function loadJson() {
+            let jsonObj;
+            for (let i in jsonList) {
+                jsonList[i].viewer = new JSONViewer();
+                document.querySelector("#jsonviewer-" + jsonList[i].version).appendChild(jsonList[i].viewer.getContainer())
+                jsonObj = JSON.parse(jsonList[i].json);
+                jsonList[i].obj = jsonObj
+                jsonList[i].viewer.showJSON(jsonList[i].obj);
+            }
+        }
+
+        function expandJSON(id) {
+            console.log("expand ....", id)
+            for (let i in jsonList) {
+                if (jsonList[i].version === id ) {
+                    jsonList[i].viewer.showJSON(jsonList[i].obj)
+                }
+            }
+        }
+
+        function collapseJSON(id) {
+            console.log("collapse ....", id)
+            for (let i in jsonList) {
+                if (jsonList[i].version === id ) {
+                    jsonList[i].viewer.showJSON(jsonList[i].obj, null, 1)
+                }
+            }
+        }
+
+        function copyToClipBoard(id) {
+            for (let i in jsonList) {
+                if (jsonList[i].version === id ) {
+                    navigator.clipboard.writeText(jsonList[i].json).then(function () {
+                        /* clipboard successfully set */
+                    }, function () {
+                        /* clipboard write failed */
+                    });
+                }
+            }
+        }
+
+    </script>
+
+</head>
+<body>
+<h1>Hello again </h1>
+<div>här ska det in en drop down med filer från ~/.ib</div>
+<div>
+    <form action="/index.html">
+        <div>
+            <label for="cars">Välj tillfälle:</label>
+        </div>
+        <div>
+            <select id="config" name="occasion">
+                {{ range $occasion := .OccasionDefinitions }}
+                    <option value="{{ $occasion.Name }}">{{ $occasion.Name }} - {{ $occasion.Description }}</option>
+                {{ end }}
+            </select>
+        </div>
+        <input type="submit">
+    </form>
+    <br>
+    <div>
+        <div>
+            <div class="row">
+                <div class="col-4">
+                    <button type="button" class="btn btn-dark" onclick="collapseJSON({{ .ID }})"><i class="bi bi-arrows-collapse"></i> Collapse</button>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn btn-dark" onclick="expandJSON({{ .ID }})"><i class="bi bi-arrows-expand"></i> Expand</button>
+                </div>
+                <div class="col-4 d-flex justify-content-right">
+                    <button type="button" class="btn btn-dark" onclick="copyToClipBoard({{ .ID }})"><i class="bi bi-clipboard"></i> Copy</button>
+                </div>
+            </div>
+
+            <div class="row"></div>
+            <div id="jsonviewer-{{ .ID }}"></div>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+
+</script>
+
+</body>
+</html>
