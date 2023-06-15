@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -131,4 +132,54 @@ func (app *application) GetImage(w http.ResponseWriter, r *http.Request) {
 
 	// _, _ = w.Write(imageBuf)
 
+}
+
+func (app *application) GenerateOccasion(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	file := r.Form.Get("file")
+
+	fmt.Printf("file is %s\n", file)
+
+	response := JSONResponse{
+		Error:   false,
+		Message: "generated from:" + file,
+	}
+
+	// här kan jag fixa implementation
+	jsonFile, err := os.Open(file)
+	if err != nil {
+		response.Error = true
+		response.Message = err.Error()
+	}
+
+	// get the definition from file
+	definition := models.OccasionDefinition{}
+
+	err = json.NewDecoder(jsonFile).Decode(&definition)
+	if err != nil {
+		// return fmt.Errorf("failed to decode json file %s: %w", config, err)
+		response.Error = true
+		response.Message = err.Error()
+	}
+
+	err = definition.GenerateOccasion()
+	if err != nil {
+		// return fmt.Errorf("failed to generate occasion: %w", err)
+		response.Error = true
+		response.Message = err.Error()
+	}
+
+	status := http.StatusOK
+	if response.Error {
+		status = http.StatusBadRequest
+	}
+	err = app.WriteJSON(w, status, response)
+	if err != nil {
+		fmt.Println("ERROR ", err)
+	}
 }

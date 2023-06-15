@@ -39,6 +39,7 @@ func (m *FileModel) GetOccasions() ([]*models.OccasionDefinition, error) {
 		if err != nil {
 			return nil, err
 		}
+		occasion.Filename = path.Join(m.Dir, f.Name())
 
 		occasions = append(occasions, occasion)
 	}

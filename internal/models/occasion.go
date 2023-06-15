@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,18 +19,32 @@ import (
 	"github.com/svanhalla/ib-ui/static"
 )
 
+type ProgressReporter func(id int, status string)
+
 type OccasionDefinition struct {
-	UUID            string `json:"uuid"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	Root            string `json:"root,omitempty"` // the root directory
-	NumberOfColumns int    `json:"numberOfColumns"`
-	Title           string `json:"title,omitempty"`    // the title on the cover image
-	Size            int    `json:"size,omitempty"`     // the size for scales images
-	Date            string `json:"date,omitempty"`     // date for the occasion
-	Location        string `json:"location,omitempty"` // location for the occasion
-	Cover           Part   `json:"cover"`              // the cover image(s)
-	Parts           []Part `json:"parts,omitempty"`    // the page parts
+	Filename         string           `json:"-"`
+	UUID             string           `json:"uuid"`
+	Name             string           `json:"name"`
+	Description      string           `json:"description"`
+	Root             string           `json:"root,omitempty"` // the root directory
+	NumberOfColumns  int              `json:"numberOfColumns"`
+	Title            string           `json:"title,omitempty"`    // the title on the cover image
+	Size             int              `json:"size,omitempty"`     // the size for scales images
+	Date             string           `json:"date,omitempty"`     // date for the occasion
+	Location         string           `json:"location,omitempty"` // location for the occasion
+	Cover            Part             `json:"cover"`              // the cover image(s)
+	Parts            []Part           `json:"parts,omitempty"`    // the page parts
+	ProgressId       int              `json:"-"`
+	ProgressReporter ProgressReporter `json:"-"`
+	Done             chan bool        `json:"-"`
+}
+
+func (d OccasionDefinition) WriteProgress(message string) {
+	if d.ProgressReporter == nil {
+		return
+	}
+
+	d.ProgressReporter(d.ProgressId, message)
 }
 
 type Part struct {
@@ -226,14 +239,19 @@ type Occasion struct {
 	Columns        int
 }
 
-func createImageMap(imageSize int, numberOfColumns int, path string, directoryName string) map[int][]Image {
+func (d OccasionDefinition) createImageMap(imageSize int, numberOfColumns int, path string, directoryName string) (map[int][]Image, error) {
 	wantedMap := make(map[int][]Image, numberOfColumns)
 
-	for i, theImage := range getImagesInDir(path + directoryName) {
+	imagesInDir, err := d.getImagesInDir(path + directoryName)
+	if err != nil {
+		return wantedMap, err
+	}
+	for i, theImage := range imagesInDir {
 		if theImage.Name == ".DS_Store" {
 			continue
 		}
 
+		d.WriteProgress(path + directoryName + theImage.Name)
 		// resize the image
 		if theImage.Type == imageStr {
 			imageConfig, err := theImage.GetImageConfig(path)
@@ -260,15 +278,15 @@ func createImageMap(imageSize int, numberOfColumns int, path string, directoryNa
 		}
 	}
 
-	return wantedMap
+	return wantedMap, nil
 }
 
-func getImagesInDir(thePath string) []Image {
+func (d OccasionDefinition) getImagesInDir(thePath string) ([]Image, error) {
 	var images []Image
 
 	files, err := os.ReadDir(thePath)
 	if err != nil {
-		log.Fatal(err)
+		return images, err
 	}
 
 	for _, file := range files {
@@ -289,16 +307,24 @@ func getImagesInDir(thePath string) []Image {
 		})
 	}
 
-	return images
+	return images, nil
 }
 
 func (d OccasionDefinition) GenerateOccasion() error {
+	if d.ProgressReporter != nil {
+		d.WriteProgress("inside")
+	}
+
+	imageMap, err := d.createImageMap(d.Cover.Size, 1, d.Root, d.Cover.Dir)
+	if err != nil {
+		return err
+	}
 	occasion := Occasion{
 		Columns:  100 / d.NumberOfColumns,
 		Title:    d.Title,
 		Date:     d.Date,
 		Location: d.Location,
-		Cover:    createImageMap(d.Cover.Size, 1, d.Root, d.Cover.Dir),
+		Cover:    imageMap,
 		Parts:    make([]WeddingPart, 0),
 	}
 
@@ -311,10 +337,14 @@ func (d OccasionDefinition) GenerateOccasion() error {
 			size = part.Size
 		}
 
+		imageMap, err := d.createImageMap(size, d.NumberOfColumns, d.Root, part.Dir)
+		if err != nil {
+			return err
+		}
 		occasion.Parts = append(occasion.Parts, WeddingPart{
 			Name:   part.Name,
 			ID:     slug.Make(part.Name),
-			Images: createImageMap(size, d.NumberOfColumns, d.Root, part.Dir),
+			Images: imageMap,
 		})
 	}
 
@@ -343,6 +373,11 @@ func (d OccasionDefinition) GenerateOccasion() error {
 	if err != nil {
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
+
+	//if d.Done != nil {
+	//	d.ProgressReporter(3, "done")
+	//	d.Done <- true
+	//}
 
 	return nil
 }

@@ -18,6 +18,8 @@
                 <th>Name</th>
                 <th>Description</th>
                 <th>Root</th>
+                <th>File</th>
+                <th>Status</th>
                 <th></th>
                 <th></th>
             </tr>
@@ -32,8 +34,12 @@
                     </td>
                     <td>{{$v.Description}}</td>
                     <td>{{$v.Root }}</td>
+                    <td>{{$v.Filename }}</td>
+                    <td id="{{ $i }}-status"></td>
                     <td>
-                        <button type="button" class="btn btn-secondary" onclick="#!">GEN</button>
+                        <button type="button" class="btn btn-secondary"
+                                onclick="generateOccasion( {{ $i }}, {{ $v.Filename }})">GEN
+                        </button>
                     </td>
                     <td>
                         <button type="button" class="btn btn-secondary" onclick="editOccasion({{ $i }})">Edit</button>
@@ -48,8 +54,78 @@
 
 {{ define "js" }}
     <script>
+
+        const socket = new WebSocket('ws://localhost:4000/ws');
+
+        socket.addEventListener('open', event => {
+            console.log('Ansluten till WebSocket-servern');
+        });
+
+        socket.addEventListener('message', event => {
+            const message = event.data;
+            displayMessage(message);
+        });
+
+        socket.addEventListener('close', event => {
+            console.log('Frånkopplad från WebSocket-servern');
+        });
+
+
+        function displayMessage(message) {
+            console.log(message)
+            answer = JSON.parse(message)
+            showStatus(answer.index, answer.message)
+            console.log(answer)
+        }
+
+        function showStatus(index, message) {
+            var errorDiv = document.getElementById(index + '-status');
+            errorDiv.innerText = message;
+            errorDiv.style.display = 'block';
+        }
+
+
         function editOccasion(id) {
             window.location.href = "occasions/" + id
+        }
+
+        function generateOccasion(index, file) {
+            console.log(index)
+            console.log(file)
+
+            generationRequest = {
+                index: index,
+                file: file,
+                message: 'generate request'
+            }
+
+            const request = JSON.stringify(generationRequest)
+            socket.send(request)
+
+            // showStatus(index, "working...")
+            //
+            // fetch('/api/generate', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Accept': 'application/json',
+            //         'Content-Type': 'application/x-www-form-urlencoded'
+            //     },
+            //     body: 'file=' + file
+            // })
+            //     .then(response => {
+            //         showStatus(index, "response " + response.status)
+            //         return response.json()
+            //     })
+            //     .then(data => {
+            //         if (data.error) {
+            //             showStatus(index, data.message)
+            //         } else {
+            //             showStatus(index, data.message)
+            //         }
+            //     })
+            //     .catch(error => {
+            //         console.log(error)
+            //     });
         }
     </script>
 {{ end }}
