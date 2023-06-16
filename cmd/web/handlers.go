@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"sort"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -20,17 +22,16 @@ func (app *application) Home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) Occasion(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	occasionID, _ := strconv.Atoi(id)
+	theUUID := chi.URLParam(r, "uuid")
 	var occasion = &models.OccasionDefinition{}
 
-	if occasionID > -1 {
+	if theUUID != "-1" {
 		occasions, err := app.Repo.GetOccasions()
 		if err != nil {
 			app.errorLog.Println("error getting occasions")
 			return
 		}
-		occasion = occasions[occasionID]
+		occasion = occasions[theUUID]
 	}
 
 	if err := app.renderTemplate(w, r, "edit-occasion", &templateData{
@@ -43,16 +44,49 @@ func (app *application) Occasion(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *application) DeleteOccasion(w http.ResponseWriter, r *http.Request) {
+	theUUID := chi.URLParam(r, "uuid")
+	fmt.Println("delete ?", theUUID)
+	occasions, err := app.Repo.GetOccasions()
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+	for _, occasion := range occasions {
+		if occasion.UUID == theUUID {
+			fmt.Println("found the uuid", occasion.Filename)
+			err := os.Remove(occasion.Filename)
+			if err != nil {
+				fmt.Printf("Kunde inte ta bort filen: %v", err)
+				return
+			}
+
+			fmt.Printf("Filen %s har tagits bort\n", occasion.Filename)
+			return
+			break
+		}
+	}
+
+}
+
 func (app *application) Occasions(w http.ResponseWriter, r *http.Request) {
 	occasions, err := app.Repo.GetOccasions()
 	if err != nil {
 		app.errorLog.Println(err)
 		return
 	}
+	occasionList := []*models.OccasionDefinition{}
+	for key := range occasions {
+		occasionList = append(occasionList, occasions[key])
+	}
+
+	sort.Slice(occasionList, func(i, j int) bool {
+		return occasionList[i].Name+occasionList[i].UUID > occasionList[j].Name+occasionList[j].UUID
+	})
 
 	if err := app.renderTemplate(w, r, "list-occasion", &templateData{
 		Data: map[string]interface{}{
-			"occasions": occasions,
+			"occasions": occasionList,
 		},
 	}); err != nil {
 		app.errorLog.Println(err)
@@ -67,7 +101,7 @@ func (app *application) UpdateOccasion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uuidParam := r.Form.Get("uuid")
-	if uuidParam == "" {
+	if uuidParam != "-1" {
 		// new occasion
 		uuidParam = uuid.New().String()
 	}

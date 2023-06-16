@@ -13,16 +13,17 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/google/uuid"
+
 	"github.com/disintegration/imaging"
 	"github.com/gosimple/slug"
 	"github.com/h2non/filetype"
 	"github.com/svanhalla/ib-ui/static"
 )
 
-type ProgressReporter func(id int, status string)
+type ProgressReporter func(id string, status string)
 
 type OccasionDefinition struct {
-	Filename         string           `json:"-"`
 	UUID             string           `json:"uuid"`
 	Name             string           `json:"name"`
 	Description      string           `json:"description"`
@@ -34,7 +35,7 @@ type OccasionDefinition struct {
 	Location         string           `json:"location,omitempty"` // location for the occasion
 	Cover            Part             `json:"cover"`              // the cover image(s)
 	Parts            []Part           `json:"parts,omitempty"`    // the page parts
-	ProgressId       int              `json:"-"`
+	Filename         string           `json:"-"`
 	ProgressReporter ProgressReporter `json:"-"`
 	Done             chan bool        `json:"-"`
 }
@@ -44,7 +45,7 @@ func (d OccasionDefinition) WriteProgress(message string) {
 		return
 	}
 
-	d.ProgressReporter(d.ProgressId, message)
+	d.ProgressReporter(d.UUID, message)
 }
 
 type Part struct {
@@ -67,6 +68,11 @@ func NewOccasionFromFile(file string) (*OccasionDefinition, error) {
 	err = json.NewDecoder(fileReader).Decode(occasion)
 	if err != nil {
 		return nil, err
+	}
+	occasion.Filename = file
+	// if no uuid generate a uuid for it
+	if occasion.UUID == "" {
+		occasion.UUID = uuid.New().String()
 	}
 	return occasion, nil
 }

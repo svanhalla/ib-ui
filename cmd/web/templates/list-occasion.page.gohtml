@@ -26,23 +26,28 @@
             </thead>
             <tbody>
             {{ range $i,$v := $occasions  }}
-                <tr key="{{ $i }}">
+                <tr key="{{ $v.UUID }}">
                     <td>
-                        <a href="/occasions/{{$i}}">
+                        <a href="/occasions/{{$v.UUID}}">
                             {{$v.Name }}
                         </a>
                     </td>
                     <td>{{$v.Description}}</td>
                     <td>{{$v.Root }}</td>
                     <td>{{$v.Filename }}</td>
-                    <td id="{{ $i }}-status"></td>
+                    <td id="{{ $v.UUID }}-status"></td>
                     <td>
                         <button type="button" class="btn btn-secondary"
-                                onclick="generateOccasion( {{ $i }}, {{ $v.Filename }})">GEN
+                                onclick="generateOccasion( {{ $v.UUID }}, {{ $v.Filename }})">GEN
                         </button>
                     </td>
                     <td>
-                        <button type="button" class="btn btn-secondary" onclick="editOccasion({{ $i }})">Edit</button>
+                        <button type="button" class="btn btn-secondary" onclick="editOccasion({{ $v.UUID }})">Edit
+                        </button>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-secondary" onclick="deleteOccasion({{ $v.UUID }})">Delete
+                        </button>
                     </td>
                 </tr>
             {{ end }}
@@ -55,52 +60,92 @@
 {{ define "js" }}
     <script>
 
-        const socket = new WebSocket('ws://localhost:4000/ws');
+        let socket;
 
-        socket.addEventListener('open', event => {
-            console.log('Ansluten till WebSocket-servern');
-        });
+        function connectWebSocket() {
+            socket = new WebSocket('ws://localhost:4000/ws');
 
-        socket.addEventListener('message', event => {
-            const message = event.data;
-            displayMessage(message);
-        });
+            socket.addEventListener('open', event => {
+                console.log('Ansluten till WebSocket-servern');
+            });
 
-        socket.addEventListener('close', event => {
-            console.log('Frånkopplad från WebSocket-servern');
-        });
+            socket.addEventListener('message', event => {
+                const message = event.data;
+                displayMessage(message);
+            });
 
+            socket.addEventListener('close', event => {
+                console.log('Frånkopplad från WebSocket-servern');
+            });
+
+            socket.onclose = function (event) {
+                console.log("WebSocket anslutning stängd");
+                // Försök ansluta igen efter en viss fördröjning
+                setTimeout(function () {
+                    connectWebSocket();
+                }, 1000);
+            };
+        }
 
         function displayMessage(message) {
+            console.log("recieved message")
             console.log(message)
             answer = JSON.parse(message)
-            showStatus(answer.index, answer.message)
+            showStatus(answer.uuid, answer.message)
             console.log(answer)
         }
 
-        function showStatus(index, message) {
-            var errorDiv = document.getElementById(index + '-status');
+        function showStatus(uuid, message) {
+            console.log(uuid)
+            console.log(message)
+            console.log("--------")
+            var errorDiv = document.getElementById(uuid + '-status');
             errorDiv.innerText = message;
             errorDiv.style.display = 'block';
         }
 
 
-        function editOccasion(id) {
-            window.location.href = "occasions/" + id
+        function editOccasion(uuid) {
+            window.location.href = "occasions/" + uuid
         }
 
-        function generateOccasion(index, file) {
-            console.log(index)
+        function deleteOccasion(uuid) {
+            // console.log(window.location.href)
+
+            const url = "occasions/" + uuid;
+            fetch(url, {
+                method: "DELETE"
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Successful deletion
+                        console.log("Deletion successful.");
+                        location.reload()
+                        // Optionally, you can redirect to another page after deletion
+                        // window.location.href = "new_page_url";
+                    } else {
+                        // Something went wrong
+                        console.error("An error occurred during deletion.");
+                    }
+                })
+                .catch(error => {
+                    console.error("A network error occurred.", error);
+                });
+        }
+
+        function generateOccasion(uuid, file) {
+            console.log(uuid)
             console.log(file)
 
             generationRequest = {
-                index: index,
+                uuid: uuid,
                 file: file,
                 message: 'generate request'
             }
 
             const request = JSON.stringify(generationRequest)
             socket.send(request)
+            console.log("sent request")
 
             // showStatus(index, "working...")
             //
@@ -127,5 +172,7 @@
             //         console.log(error)
             //     });
         }
+
+        connectWebSocket()
     </script>
 {{ end }}

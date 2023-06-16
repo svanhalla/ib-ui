@@ -34,7 +34,8 @@ func (app *application) routes() http.Handler {
 	mux.Get("/", app.Home)
 	mux.Get("/ws", Websockets)
 	mux.Get("/occasions", app.Occasions)
-	mux.Get("/occasions/{id}", app.Occasion)
+	mux.Get("/occasions/{uuid}", app.Occasion)
+	mux.Delete("/occasions/{uuid}", app.DeleteOccasion)
 	mux.Post("/occasions", app.UpdateOccasion)
 
 	mux.Get("/resize-image", app.ResizeForm)
@@ -52,7 +53,7 @@ func (app *application) routes() http.Handler {
 var upgrader = websocket.Upgrader{}
 
 type generateRequest struct {
-	Index   int    `json:"index"`
+	UUID    string `json:"uuid"`
 	Message string `json:"message"`
 	File    string `json:"file"`
 }
@@ -61,9 +62,9 @@ var messageChannel = make(chan generateRequest)
 
 func Websockets(w http.ResponseWriter, r *http.Request) {
 
-	progresReporter := func(id int, status string) {
+	progresReporter := func(id string, status string) {
 		message := generateRequest{
-			Index:   id,
+			UUID:    id,
 			Message: status,
 		}
 		messageChannel <- message
@@ -104,7 +105,7 @@ func Websockets(w http.ResponseWriter, r *http.Request) {
 		}
 
 		answer := generateRequest{}
-		answer.Index = genRequest.Index
+		answer.UUID = genRequest.UUID
 
 		// check if the file exists
 
@@ -124,7 +125,7 @@ func Websockets(w http.ResponseWriter, r *http.Request) {
 				// return fmt.Errorf("failed to decode json file %s: %w", config, err)
 				answer.Message = err.Error()
 			}
-			definition.ProgressId = genRequest.Index
+
 			definition.ProgressReporter = progresReporter
 			//definition.Done = make(chan bool)
 			//

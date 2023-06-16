@@ -24,13 +24,13 @@ func (m *FileModel) RootDir() string {
 	return m.Dir
 }
 
-func (m *FileModel) GetOccasions() ([]*models.OccasionDefinition, error) {
+func (m *FileModel) GetOccasions() (map[string]*models.OccasionDefinition, error) {
 	files, err := os.ReadDir(m.RootDir())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read dir %q: %w", m.Dir, err)
 	}
 
-	occasions := []*models.OccasionDefinition{}
+	occasions := map[string]*models.OccasionDefinition{}
 	for _, f := range files {
 		if f.IsDir() {
 			continue
@@ -41,7 +41,7 @@ func (m *FileModel) GetOccasions() ([]*models.OccasionDefinition, error) {
 		}
 		occasion.Filename = path.Join(m.Dir, f.Name())
 
-		occasions = append(occasions, occasion)
+		occasions[occasion.UUID] = occasion
 	}
 	return occasions, nil
 }
