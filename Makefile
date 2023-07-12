@@ -13,12 +13,18 @@ clean:
 
 build: build_app
 
+#https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies
 ## build_app: builds the front end
 build_app:
 	@echo "Building application ${APP_NAME}..."
 	@go build -o dist/${APP_NAME} ./cmd/web
 	@go build -o dist/ib-cli ./cmd/cli
 	@echo "Application '${APP_NAME}' and 'ib-cli' built!"
+
+build_app_amd:
+	@echo "Building application ${APP_NAME}..."
+	@GOARCH=amd64;GOOS=darwin;go build -o dist/amd/${APP_NAME} ./cmd/web
+	@echo "Application 'amd/${APP_NAME}' and 'ib-cli' built!"
 
 ## start: all applications in project
 start: build start_app

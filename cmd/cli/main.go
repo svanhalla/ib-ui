@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/google/uuid"
+
 	"github.com/svanhalla/ib-ui/internal/models"
 
 	"github.com/svanhalla/ib-ui/internal/picture"
@@ -153,7 +155,9 @@ func ResizeImage(cliCtx *cli.Context) error {
 }
 
 func ExampleJSON(_ *cli.Context) error {
+	theUUID, _ := uuid.NewUUID()
 	var Definition = models.OccasionDefinition{
+		UUID:            theUUID.String(),
 		Name:            "generated example",
 		Description:     "generated example",
 		Root:            "/tmp/images/",
